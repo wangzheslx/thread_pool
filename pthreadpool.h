@@ -9,7 +9,7 @@
 template <typename T>
 class pthreadpool{
 public:
-    pthreadpool(int thread_num = 8, int max_request = 10000);
+    pthreadpool(int thread_num = 8, int max_request = 100);
     ~pthreadpool();
     bool append(T* request);
 private:
@@ -24,6 +24,7 @@ private:
     sem m_queuestat;
     locker m_queuelocker;
     bool m_stop;
+    int id = 0;
 };
 
 template <typename T>
@@ -68,6 +69,7 @@ bool pthreadpool<T>::append(T* request){
         return false;
     }
     m_workqueue.push_back(request);
+    printf("send %d\n",*m_workqueue.back());
     m_queuelocker.unlock();
     m_queuestat.post();
     return true;
@@ -76,6 +78,7 @@ bool pthreadpool<T>::append(T* request){
 template <typename T>
 void* pthreadpool<T>::worker(void* arg){
     pthreadpool* pool = (pthreadpool* )arg;
+
     pool->run();
     return pool;
 }
@@ -93,9 +96,12 @@ void pthreadpool<T>::run(){
         m_workqueue.pop_front();
         
         if(!request){
+            m_queuelocker.unlock();
             continue;
         }
-        printf("发送的为%d\n",*request);
+        printf("receive %d\n",*request);
+        delete request;
+        request = nullptr;
         m_queuelocker.unlock();
     }
 }
